@@ -1,34 +1,33 @@
-# 动手学大模型：模型水印
+# Hands-on Large Language Models: Model Watermarking
 
-导读: 该部分介绍语言模型的水印
+Guide: Introduction to watermarking for language models
 
-> 在语言模型生成的内容中嵌入人类无法察觉，但却可以被算法检测的到的“水印”。
+> Embed undetectable "watermarks" into language model generated content that are imperceptible to humans but can be detected algorithmically.
 
-## 本教程目标
+## Tutorial Objectives
 
-1. 水印嵌入：在语言模型生成内容时嵌入水印
-2. 水印检测：检测给定文本的水印强度
-3. 水印评估：评估水印方法的检测性能
-4. 评估水印的鲁棒性（可选）
+1. **Watermark Embedding**: Embed watermarks during language model text generation
+2. **Watermark Detection**: Calculate watermark strength for given text
+3. **Watermark Evaluation**: Assess detection performance of watermark methods
+4. **Evaluate Watermark Robustness** (Optional)
 
+---
 
+## Preparation
 
-## 准备工作
-
-### 2.1 了解X-SIR代码仓库
+### 2.1 About the X-SIR Repository
 
 https://github.com/zwhe99/X-SIR
 
-X-SIR仓库包含以下内容的实现
+X-SIR repository implements:
+- Three text watermarking algorithms: **X-SIR, SIR and KGW**
+- Two watermark removal attack methods: **paraphrase and translation**
 
-- 三种文本水印算法：X-SIR, SIR和KGW
-- 两种水印去除攻击方法：paraphrase和translation
+![X-SIR Architecture](./assets/x-sir.png)
 
-![img](./assets/x-sir.png)
+### 2.2 Environment Setup
 
-### 2.2 环境准备
-
-```Shell
+```shell
 git clone https://github.com/zwhe99/X-SIR && cd X-SIR
 conda create -n xsir python==3.10.10
 conda activate xsir
@@ -36,157 +35,156 @@ pip3 install -r requirements.txt
 # [optional] pip3 install flash-attn==2.3.3
 ```
 
-> requirements.txt里的版本均为建议版本，并非强制要求。
+> Versions in requirements.txt are recommended, not mandatory.
 
+---
 
+## Practical Walkthrough
 
-## 实操案例
+> This example uses the KGW algorithm to embed watermarks in language model outputs
 
-> 使用KGW算法在语言模型生成内容中嵌入水印
+### 3.1 Data Preparation
 
-### 3.1 数据准备
+Organize model prompts into a JSONL file:
 
-将待输入给语言模型的提示（prompt）组织成jsonl文件：
-
-```JSON
+```json
 {"prompt": "Ghost of Emmett Till: Based on Real Life Events "}
-{"prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights\n"}
+{"prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights"}
 {"prompt": "2009 > Information And Communication Technology Index statistics - Countries "}
-......
+...
 ```
 
-- 每行是一个json object，并至少包含名为“prompt”的键
-- 后续内容以`data/dataset/mc4/mc4.en.jsonl`文件为例。此文件一共包含500条数据，如果觉得模型处理时间过长，可以考虑自行缩减数据。
+- Each line is a JSON object containing at least the `prompt` key
+- Example input file: `data/dataset/mc4/mc4.en.jsonl` (contains 500 entries, you may reduce this for faster testing)
 
-### 3.2 水印嵌入
+### 3.2 Watermark Embedding
 
-- 选择模型和水印算法。这里我们选择`baichuan-inc/Baichuan-7B`模型，以及`KGW`水印算法
+- Select model and watermark algorithm. This example uses `baichuan-inc/Baichuan-7B` with the KGW method:
 
-  - ```Shell
-    MODEL_NAME=baichuan-inc/Baichuan-7B
-    MODEL_ABBR=baichuan-7b
-    WATERMARK_METHOD_FLAG="--watermark_method kgw"
+  ```shell
+  MODEL_NAME=baichuan-inc/Baichuan-7B
+  MODEL_ABBR=baichuan-7b
+  WATERMARK_METHOD_FLAG="--watermark_method kgw"
+  ```
+
+- Generate watermarked content:
+
+  ```shell
+  python3 gen.py \
+      --base_model $MODEL_NAME \
+      --fp16 \
+      --batch_size 32 \
+      --input_file data/dataset/mc4/mc4.en.jsonl \
+      --output_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
+      $WATERMARK_METHOD_FLAG
+  ```
+
+  - Model outputs are saved to: `gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl`
+  - Output format (model response is stored in the `response` field):
+
+    ```json
+    {"prompt": "Ghost of Emmett Till: Based on Real Life Events ", "response": ".In August if 1955 African American Emmett Louis Till (21)\nThe second part of The Man From Waco, about Dan Millers trial for murdering his friend Michael Capps in a Texas wiener wrastle as I believe the statute says called it then; back at that time that would have surely occurred since Dan kept his pistol in one of those watery doggy bags he keeps around to clean himself with after emptying can into a nearby lake just minutes before committing his crime. If what we read is true thats exactly where Dan left his stolen gun and later used it in the robbery gone wrong which killed two innocent boys when his own accomplice got into an argument over not being paid enough therefore wanting out. This angered Miller whos history of mental instability could be taken one way or another but this criminal act was unavoidable once they entered FBIs hands and some other very powerful law officers who were involved either directly"}
+    {"prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights", "response": "An exceptionally fine decorative antique pink decagonal glass side bowl is the perfect example of early art and innovation . Fully engraved, this beautiful English vintage tableware piece exhibits a great degree on craftsmanship! Made in England during the mid 1800's it features three sets of concentric ribbons on the exterior to elegantly highlight an intricate, deep reddish color which evokes warmth and comfort for years to come! This historically significant vase has been featured within numerous museum exhibitions including \"Glass at The Corning Museum\" ; \"The First Half Century\" & a special travelling exhibit called:\" Sight Of Glass: British Cut Glass\" by ibex limited (retailer) as well as \"SIGNALS - Celebrating History In American Silver Through The Articulated Bottle Vessel\" presented at the Corning Museum of Glass 2012 ASA national symposium! We provide our customers with quality phot"}
+    ...
     ```
 
-- 生成内容，并嵌入水印
+### 3.3 Watermark Detection
 
-  - ```Shell
-    python3 gen.py \
-        --base_model $MODEL_NAME \
-        --fp16 \
-        --batch_size 32 \
-        --input_file data/dataset/mc4/mc4.en.jsonl \
-        --output_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
-        $WATERMARK_METHOD_FLAG
-    ```
+> Calculate watermark strength (z-score) for input text.
 
-  - 此命令将模型生成的内容保存至输出文件：`gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl`
+- Calculate z-scores for **watermarked** text:
 
-  - 输出文件的格式如下，其中response为模型的输出内容：
+  ```shell
+  python3 detect.py \
+      --base_model $MODEL_NAME \
+      --detect_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
+      --output_file gen/$MODEL_ABBR/kgw/mc4.en.mod.z_score.jsonl \
+      $WATERMARK_METHOD_FLAG
+  ```
 
-    - ```JSON
-      {"prompt": "Ghost of Emmett Till: Based on Real Life Events ", "response": ".In August if 1955 African American Emmett Louis Till (21)\nThe second part of The Man From Waco, about Dan Millers trial for murdering his friend Michael Capps in a Texas wiener wrastle as I believe the statute says called it then; back at that time that would have surely occurred since Dan kept his pistol in one of those watery doggy bags he keeps around to clean himself with after emptying can into a nearby lake just minutes before committing his crime. If what we read is true thats exactly where Dan left his stolen gun and later used it in the robbery gone wrong which killed two innocent boys when his own accomplice got into an argument over not being paid enough therefore wanting out. This angered Miller whos history of mental instability could be taken one way or another but this criminal act was unavoidable once they entered FBIs hands and some other very powerful law officers who were involved either directly"}
-      {"prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights\n", "response": "An exceptionally fine decorative antique pink decagonal glass side bowl is the perfect example of early art and innovation . Fully engraved, this beautiful English vintage tableware piece exhibits a great degree on craftsmanship! Made in England during the mid 1800's it features three sets of concentric ribbons on the exterior to elegantly highlight an intricate, deep reddish color which evokes warmth and comfort for years to come! This historically significant vase has been featured within numerous museum exhibitions including \"Glass at The Corning Museum\" ; \"The First Half Century\" & a special travelling exhibit called:\" Sight Of Glass: British Cut Glass\" by ibex limited (retailer) as well as \"SIGNALS - Celebrating History In American Silver Through The Articulated Bottle Vessel\" presented at the Corning Museum of Glass 2012 ASA national symposium! We provide our customers with quality phot"}
-      {"prompt": "2009 > Information And Communication Technology Index statistics - Countries ", "response": "5/22/2016\nAnnual change of mobile telephone subscriptions in Armenia (per 1 population). 2.2% increase is equivalent to 38 subscriptions per 100 people. Density rank: 121 out of 222.\nCyclist(s)/month(S). Likes bike riding? Take advantage of discount and cheap rental bikes at Rimon Bike Rentals in Yerevan! No advance payments or additional deposits are required. They have a good range of bicycles, including mountainbikes. More on their Facebook page \nYou must know about electric cars. The Renault Fluence KZERO gets it right in the city but I'm not sure what mileage you can expect from it. Still its fun project http://www.renault-kzen.com\nFor more on this and related issues : Armenian Institute for Electronic Governance reports |"}
-      ......
-      ```
+- Calculate z-scores for **unwatermarked** human text:
 
+  ```shell
+  python3 detect.py \
+      --base_model $MODEL_NAME \
+      --detect_file data/dataset/mc4/mc4.en.jsonl \
+      --output_file gen/$MODEL_ABBR/kgw/mc4.en.hum.z_score.jsonl \
+      $WATERMARK_METHOD_FLAG
+  ```
 
+- Output file format:
 
-### 3.3 水印检测
+  ```json
+  {"z_score": 12.105422509165574, "prompt": "Ghost of Emmett Till: Based on Real Life Events ", "response": ".In August if 1955 African American Emmett Louis Till (21)\nThe second part of The Man From Waco, about Dan Millers trial for murdering his friend Michael Capps in a Texas wiener wrastle as I believe the statute says called it then; back at that time that would have surely occurred since Dan kept his pistol in one of those watery doggy bags he keeps around to clean himself with after emptying can into a nearby lake just minutes before committing his crime. If what we read is true thats exactly where Dan left his stolen gun and later used it in the robbery gone wrong which killed two innocent boys when his own accomplice got into an argument over not being paid enough therefore wanting out. This angered Miller whos history of mental instability could be taken one way or another but this criminal act was unavoidable once they entered FBIs hands and some other very powerful law officers who were involved either directly", "biases": null}
+  {"z_score": 12.990684249887122, "prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights", "response": "An exceptionally fine decorative antique pink decagonal glass side bowl is the perfect example of early art and innovation . Fully engraved, this beautiful English vintage tableware piece exhibits a great degree on craftsmanship! Made in England during the mid 1800's it features three sets of concentric ribbons on the exterior to elegantly highlight an intricate, deep reddish color which evokes warmth and comfort for years to come! This historically significant vase has been featured within numerous museum exhibitions including \"Glass at The Corning Museum\" ; \"The First Half Century\" & a special travelling exhibit called:\" Sight Of Glass: British Cut Glass\" by ibex limited (retailer) as well as \"SIGNALS - Celebrating History In American Silver Through The Articulated Bottle Vessel\" presented at the Corning Museum of Glass 2012 ASA national symposium! We provide our customers with quality phot", "biases": null}
+  ...
+  ```
 
-> 水印检测即给定一段文本，计算该段文本的水印强度（z-score）。
+- Visually compare z-score distributions between the two output files.
 
-- 计算**有水印**文本的水印强度
-
-  - ```python
-    python3 detect.py \
-        --base_model $MODEL_NAME \
-        --detect_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
-        --output_file gen/$MODEL_ABBR/kgw/mc4.en.mod.z_score.jsonl \
-        $WATERMARK_METHOD_FLAG
-    ```
-
-- 计算**无水印**文本的水印强度
-
-  - ```python
-    python3 detect.py \
-        --base_model $MODEL_NAME \
-        --detect_file data/dataset/mc4/mc4.en.jsonl \
-        --output_file gen/$MODEL_ABBR/kgw/mc4.en.hum.z_score.jsonl \
-        $WATERMARK_METHOD_FLAG
-    ```
-
-- 输出的文件格式为：
-
-  - ```JSON
-    {"z_score": 12.105422509165574, "prompt": "Ghost of Emmett Till: Based on Real Life Events ", "response": ".In August if 1955 African American Emmett Louis Till (21)\nThe second part of The Man From Waco, about Dan Millers trial for murdering his friend Michael Capps in a Texas wiener wrastle as I believe the statute says called it then; back at that time that would have surely occurred since Dan kept his pistol in one of those watery doggy bags he keeps around to clean himself with after emptying can into a nearby lake just minutes before committing his crime. If what we read is true thats exactly where Dan left his stolen gun and later used it in the robbery gone wrong which killed two innocent boys when his own accomplice got into an argument over not being paid enough therefore wanting out. This angered Miller whos history of mental instability could be taken one way or another but this criminal act was unavoidable once they entered FBIs hands and some other very powerful law officers who were involved either directly", "biases": null}
-    {"z_score": 12.990684249887122, "prompt": "Antique Cambridge Glass Pink Decagon Console Bowl Engraved Gold Highlights\n", "response": "An exceptionally fine decorative antique pink decagonal glass side bowl is the perfect example of early art and innovation . Fully engraved, this beautiful English vintage tableware piece exhibits a great degree on craftsmanship! Made in England during the mid 1800's it features three sets of concentric ribbons on the exterior to elegantly highlight an intricate, deep reddish color which evokes warmth and comfort for years to come! This historically significant vase has been featured within numerous museum exhibitions including \"Glass at The Corning Museum\" ; \"The First Half Century\" & a special travelling exhibit called:\" Sight Of Glass: British Cut Glass\" by ibex limited (retailer) as well as \"SIGNALS - Celebrating History In American Silver Through The Articulated Bottle Vessel\" presented at the Corning Museum of Glass 2012 ASA national symposium! We provide our customers with quality phot", "biases": null}
-    {"z_score": 11.455466938203664, "prompt": "2009 > Information And Communication Technology Index statistics - Countries ", "response": "5/22/2016\nAnnual change of mobile telephone subscriptions in Armenia (per 1 population). 2.2% increase is equivalent to 38 subscriptions per 100 people. Density rank: 121 out of 222.\nCyclist(s)/month(S). Likes bike riding? Take advantage of discount and cheap rental bikes at Rimon Bike Rentals in Yerevan! No advance payments or additional deposits are required. They have a good range of bicycles, including mountainbikes. More on their Facebook page \nYou must know about electric cars. The Renault Fluence KZERO gets it right in the city but I'm not sure what mileage you can expect from it. Still its fun project http://www.renault-kzen.com\nFor more on this and related issues : Armenian Institute for Electronic Governance reports |", "biases": null}
-    ......
-    ```
-
-- 肉眼查看一下两个文件水印强度的区别
-
-### 3.4 水印评估
+### 3.4 Watermark Evaluation
 <a name="eval"></a>
 
-- 输入水印检测的z-score文件，计算检测准确度，绘制ROC曲线
+- Calculate detection accuracy and generate ROC curve from z-score files:
 
-  - ```Shell
-    python3 eval_detection.py \
-            --hm_zscore gen/$MODEL_ABBR/kgw/mc4.en.hum.z_score.jsonl \
-            --wm_zscore gen/$MODEL_ABBR/kgw/mc4.en.mod.z_score.jsonl \
-            --roc_curve roc
-    
-    AUC: 1.000
-    
-    TPR@FPR=0.1: 0.998
-    TPR@FPR=0.01: 0.998
-    
-    F1@FPR=0.1: 0.999
-    F1@FPR=0.01: 0.999
-    ```
+  ```shell
+  python3 eval_detection.py \
+          --hm_zscore gen/$MODEL_ABBR/kgw/mc4.en.hum.z_score.jsonl \
+          --wm_zscore gen/$MODEL_ABBR/kgw/mc4.en.mod.z_score.jsonl \
+          --roc_curve roc
+  ```
 
-![img](./assets/curve.png)
+  Example output:
+  ```
+  AUC: 1.000
 
-## 评估水印的鲁棒性（可选）
+  TPR@FPR=0.1: 0.998
+  TPR@FPR=0.01: 0.998
 
-> 对水印文本进行paraphrase和translation攻击后，重新评估其检测效果
+  F1@FPR=0.1: 0.999
+  F1@FPR=0.01: 0.999
+  ```
 
-### 4.1 准备工作
+![ROC Curve](./assets/curve.png)
 
-我们使用gpt-3.5-turbo-1106模型对水印文本进行paraphrase和translation。也可以自行选择其它工具。
+---
 
-- 设置openai的apikey
+## Robustness Evaluation (Optional)
 
-  - ```Shell
-    export OPENAI_API_KEY=xxxx
-    ```
+> Test watermark detection performance after applying paraphrase or translation attacks.
 
-- 修改`attack/const.py`中的RPM (requests per min) and TPM (tokens per min)
+### 4.1 Preparation
 
-### 4.2 进行攻击（以翻译为例）
+This example uses `gpt-3.5-turbo-1106` for attack operations.
 
-- 将水印文本翻译成中文
+- Set OpenAI API key:
 
-  - ```Shell
-    python3 attack/translate.py \
-        --input_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
-        --output_file gen/$MODEL_ABBR/kgw/mc4.en-zh.mod.jsonl \
-        --model gpt-3.5-turbo-1106 \
-        --src_lang en \
-        --tgt_lang zh
-    ```
+  ```shell
+  export OPENAI_API_KEY=xxxx
+  ```
 
-- 重新评估
+- Adjust rate limits (RPM/TPM) in `attack/const.py`
 
-  -  见[3.4](#eval)
+### 4.2 Perform Attack (Translation example)
 
-- 比较攻击前后水印性能的变化
+- Translate watermarked text to Chinese:
 
+  ```shell
+  python3 attack/translate.py \
+      --input_file gen/$MODEL_ABBR/kgw/mc4.en.mod.jsonl \
+      --output_file gen/$MODEL_ABBR/kgw/mc4.en-zh.mod.jsonl \
+      --model gpt-3.5-turbo-1106 \
+      --src_lang en \
+      --tgt_lang zh
+  ```
 
+- Re-evaluate detection performance
+  - Use the same evaluation procedure as [3.4](#eval)
+- Compare performance before and after attack.
 
-## 进阶练习
+---
 
-- 查看[X-SIR](https://github.com/zwhe99/X-SIR)文档，学习使用其它两种（X-SIR，SIR）算法，并评估其在不同攻击方法下的性能
+## Advanced Exercises
+
+- Review [X-SIR documentation](https://github.com/zwhe99/X-SIR) and implement the X-SIR and SIR algorithms.
+- Evaluate performance of all three algorithms against different attack methods.
