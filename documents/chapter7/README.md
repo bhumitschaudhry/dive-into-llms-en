@@ -1,85 +1,85 @@
-# LLM文本隐写术
+# LLM Text Steganography
 
-本项目实现了基于大型语言模型（LLM）的文本隐写术，使用GPT-2模型在生成的文本中隐藏信息。项目包含两种编码方法：霍夫曼编码（Huffman Coding）和固定长度编码（Fixed Length Coding, FLC）。
+This project implements text steganography based on large language models (LLMs). It uses a GPT-2 model to hide information inside generated text. The project includes two encoding methods: Huffman Coding and Fixed Length Coding (FLC).
 
-## 功能特点
+## Features
 
-- 在GPT-2文本生成中实现隐写术
-- 支持两种编码方法：
-  - 霍夫曼编码（Huffman Coding）
-  - 固定长度编码（Fixed Length Coding, FLC）
-- 同时生成隐写文本和普通文本用于对比
+- Implements steganography in GPT-2 text generation
+- Supports two encoding methods:
+  - Huffman Coding
+  - Fixed Length Coding (FLC)
+- Generates both steganographic text and normal text for comparison
 
-## 环境要求
+## Requirements
 
 - Python 3.8+
 - PyTorch
 - Transformers
-- CUDA（可选，用于GPU加速）
+- CUDA (optional, for GPU acceleration)
 
-## 安装步骤
+## Installation
 
-安装依赖包：
+Install the dependencies:
 
 ```bash
-pip install torch # 如果是GPU，注意指定torch是GPU版本
+pip install torch # If you are using a GPU, make sure to install the GPU-enabled torch package
 pip install transformers
 pip install jupyter
 ```
 
-## 使用方法
+## Usage
 
-1. 打开Jupyter notebook：
+1. Open Jupyter Notebook:
 ```bash
 jupyter notebook llm_stega.ipynb
 ```
 
-2. notebook包含三个主要部分：
-   - 霍夫曼编码实现
-   - 固定长度编码（FLC）实现
-   - 文本生成与隐写
+2. The notebook contains three main parts:
+   - Huffman Coding implementation
+   - Fixed Length Coding (FLC) implementation
+   - Text generation and steganography
 
-3. 生成隐写文本：
-   - 选择编码方法（霍夫曼编码或FLC）
-   - 设置参数（编码的k值）
-   - 使用自定义提示词运行主函数
+3. Generate steganographic text:
+   - Choose an encoding method (Huffman Coding or FLC)
+   - Set the parameter value for the encoding method
+   - Run the main function with a custom prompt
 
-示例代码：
+Example code:
 ```python
-# 初始化隐写处理器
+# Initialize the steganography handler
 k = 2
 handle = Huffman(k=2**k, bits=bits)
-# 或者使用FLC
+# Or use FLC
 # handle = FLC(k=k, bits=bits)
 
-# 生成带隐写的文本
-prompt = "Hello，I'm"
+# Generate text with steganography
+prompt = "Hello, I'm"
 stega_output, normal_output = generate_text_with_steganography(
     model, tokenizer, prompt, handle
 )
 ```
 
-## 输出文件
+## Output Files
 
-程序会生成两个文本文件：
-- `outputs-gpt2-stega.txt`：隐写文本
-- `outputs-gpt2-normal.txt`：没有隐写约束情况下原本正常生成的文本
+The program generates two text files:
+- `outputs-gpt2-stega.txt`: steganographic text
+- `outputs-gpt2-normal.txt`: normally generated text without steganographic constraints
 
-## 注意事项
+## Notes
 
-- GPT-2模型会在首次运行时自动下载，国内也可以先通过https://hf-mirror.com 镜像下载好GPT-2模型，也可以使用其他大模型。
-- 确保有足够的磁盘空间（模型约500MB）
-- 建议使用支持CUDA的GPU以获得更好的性能
-- 隐写信息长度会影响生成的文本长度
+- The GPT-2 model will be downloaded automatically the first time you run the notebook. If needed, you can also download it in advance from the https://hf-mirror.com mirror or use another model.
+- Make sure you have enough disk space available. The model is about 500 MB.
+- A CUDA-capable GPU is recommended for better performance.
+- The length of the hidden information affects the length of the generated text.
 
-## 工作原理
+## How It Works
 
-1. 隐写过程：
-   - 将秘密信息转换为二进制序列
-   - 使用GPT-2模型生成文本
-   - 通过编码方法将信息位嵌入到生成的文本中
+1. Steganography process:
+   - Convert secret information into a binary sequence
+   - Use the GPT-2 model to generate text
+   - Embed the information bits into the generated text through the encoding method
 
-2. 解码过程：
-   - 使用相同的GPT-2模型和上下文
-   - 通过解码方法从文本中提取隐藏的信息位
-   - 将二进制序列转换回原始信息
+2. Decoding process:
+   - Use the same GPT-2 model and context
+   - Extract hidden information bits from the text through the decoding method
+   - Convert the binary sequence back to the original information
