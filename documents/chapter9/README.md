@@ -1,33 +1,33 @@
-# 动手学大模型：GUI智能体构建
-## 本教程目标
-1.了解GUI智能体领域的技术路线和研究现状
+# Hands-On LLMs: Building a GUI Agent
+## Tutorial Goals
+1. Understand the technical approaches and research landscape of GUI agents
 
-2.尝试基于开源模型Qwen2-VL-7B依托OS-Kairos数据集构建自适应人机交互GUI智能体的方法
+2. Explore how to build an adaptive human-computer interaction GUI agent based on the open-source Qwen2-VL-7B model and the OS-Kairos dataset
 
-3.尝试基于构建的GUI智能体进行推理
-## 1.准备工作
-### 1.1 了解GUI智能体领域的技术路线和研究现状
-阅读教程：[[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter8/GUIagent.pdf)]
+3. Run inference with the GUI agent you build
+## 1. Preparation
+### 1.1 Learn about GUI agent technical approaches and the current research landscape
+Read the tutorial: [[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter8/GUIagent.pdf)]
 
-### 1.2 了解什么是自适应人机交互GUI智能体
-参考论文：[[Paper](https://arxiv.org/abs/2503.16465)]
+### 1.2 Learn what an adaptive human-computer interaction GUI agent is
+Reference paper: [[Paper](https://arxiv.org/abs/2503.16465)]
 
-### 1.3 数据集准备
-本教程以OS-Kairos为例，基于此工作开源的数据集构建并推理简单的GUI智能体。
+### 1.3 Prepare the dataset
+This tutorial uses OS-Kairos as the example. We will build and infer a simple GUI agent based on the open-source dataset from that work.
 
-从[[Data](https://github.com/Wuzheng02/OS-Kairos)]的README.md文件中的下载链接下载数据集，并解压到环境中。
+Download the dataset from the links in the [[Data](https://github.com/Wuzheng02/OS-Kairos)] README.md file and extract it into your environment.
 
-数据格式示例如下：
+An example of the data format is shown below:
 ```json
     {
-        "task": "打开网易云音乐，搜索《Shape of You》，并播放这首歌。",
+        "task": "Open NetEase Cloud Music, search for 'Shape of You', and play the song.",
         "image_path": "/data1/wuzh/cloud_music/images/1736614680.6518524_1.png",
         "list": [
-            " 打开网易云音乐  ",
-            " 点击首页顶部的搜索框  ",
-            " 输入：Shape of You  ",
-            " 选择正确的搜索结果  ",
-            " 点击歌名以播放  "
+            " Open NetEase Cloud Music ",
+            " Click the search box at the top of the home page ",
+            " Enter: Shape of You ",
+            " Select the correct search result ",
+            " Click the song title to play "
         ],
         "now_step": 1,
         "previous_actions": [
@@ -39,15 +39,15 @@
         "success": false
     },
 ```
-### 1.4 模型准备
-从[[Model](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct)]下载Qwen2-VL-7B模型权重。
+### 1.4 Prepare the model
+Download the Qwen2-VL-7B model weights from [[Model](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct)].
 
-## 1.5 有监督微调代码准备
-本教程采用LLaMa-Factory对Qwen2-VL-7B进行有监督微调，因此先从[[Code](https://github.com/hiyouga/LLaMA-Factory/)]下载源码。
+## 1.5 Prepare the supervised fine-tuning code
+This tutorial uses LLaMA-Factory to fine-tune Qwen2-VL-7B with supervised learning, so first download the source code from [[Code](https://github.com/hiyouga/LLaMA-Factory/)].
 
-## 2.GUI智能体构建
-### 2.1 数据预处理
-将以下代码存储为get_sharpgpt.py，并向其填出Kairos_train.json和预计存储处理后的训练集json的路径，然后运行该文件。
+## 2. Building the GUI Agent
+### 2.1 Data preprocessing
+Save the following code as `get_sharpgpt.py`, fill in the path to `Kairos_train.json` and the path where the processed training-set JSON should be written, and then run the file.
 ```python
 import json
 
@@ -144,10 +144,10 @@ for item in data:
 with open('', 'w', encoding='utf-8') as f:
     json.dump(preprocessed_data, f, ensure_ascii=False, indent=4)
 ```
-经过该步骤，我们将OS-Kairos的训练集成功转化为符合sharpgpt格式的数据，便于进行下一步训练，数据预处理完成。
-## 2.2 有监督微调
-在上一步中，我们已经得到适配LLaMa-Factory训练的格式的Kairos数据集。然后我们要修改LLaMa-Factory以注册数据集和配置训练信息。
-首先修改data/dataset_info.json，添加如下内容注册数据集：
+After this step, the OS-Kairos training set is successfully converted into data in ShareGPT-compatible format, which prepares it for the next stage of training. Data preprocessing is complete.
+## 2.2 Supervised fine-tuning
+In the previous step, we obtained a Kairos dataset that matches the format required by LLaMA-Factory training. Next, we need to modify LLaMA-Factory to register the dataset and configure the training settings.
+First, modify `data/dataset_info.json` and add the following entry to register the dataset:
 ```json
 "Karios" :{
   "file_name": "Karios_qwenscore.json",
@@ -164,7 +164,7 @@ with open('', 'w', encoding='utf-8') as f:
   }
 },   
 ```
-继续修改/examples/train_full/qwen2vl_full_sft.yaml来进行配置训练信息：
+Then modify `/examples/train_full/qwen2vl_full_sft.yaml` to configure the training settings:
 ```yaml
 ### model
 model_name_or_path: 
@@ -205,23 +205,23 @@ per_device_eval_batch_size: 1
 eval_strategy: steps
 eval_steps: 20000
 ```
-以上是一个示例配置，model_name_or_path是Qwen2-VL-7B的路径，output_dir是存放断点和log的路径。
-配置好后即可配置推理，示例命令行：
+This is an example configuration. `model_name_or_path` is the path to Qwen2-VL-7B, and `output_dir` is the path used to store checkpoints and logs.
+After the configuration is ready, you can run training with the following command:
 ```
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 FORCE_TORCHRUN=1 llamafactory-cli train examples/train_full/qwen2vl_full_sft.yaml
 ```
-此处至少要使用3张80GB的A100计算资源。
+At least three 80GB A100 GPUs are required.
 
-## 3.OS-Kairos推理验证
-训练完毕后，我们即可进行推理，推理也有很多种方法可以选择，可以自行通过transformers库和torch库构建推理代码，也可以采用LLaMa-Factory进行一键式推理，以下演示如何LLaMa-Factory进行一键式推理。
-首先要修改/examples/inference/qwen2_vl.yaml，一个示例如下
+## 3. OS-Kairos inference validation
+After training is complete, we can run inference. There are many ways to do this: you can build inference code yourself with the `transformers` and `torch` libraries, or use LLaMA-Factory for one-click inference. The example below shows how to do one-click inference with LLaMA-Factory.
+First, modify `/examples/inference/qwen2_vl.yaml` as shown below:
 ```yaml
 model_name_or_path: 
 template: qwen2_vl
 ```
-其中model_name_or_path是训练后的断点路径。
-然后即可通过
+`model_name_or_path` is the path to the trained checkpoint.
+Then run:
 ```
 CUDA_VISIBLE_DEVICES=0 FORCE_TORCHRUN=1 llamafactory-cli webchat examples/inference/qwen2_vl.yaml
 ```
-进行一键式推理，你可以自己拿出OS-Kairos测试集的图片，或者个人手机的截图，结合get_sharpgpt.py中格式的文本prompt输入给智能体，OS-Karios推理后会给出它认为当前应该进行的action和对于这个action的置信度分数。置信度分数越低，则当前指令越超出OS-Kairos的能力边界，需要人类介入来进行人机交互。
+for one-click inference. You can use screenshots from the OS-Kairos test set or screenshots from your own phone, combine them with the text prompt format from `get_sharpgpt.py`, and feed them to the agent. After inference, OS-Kairos will output the action it believes should be taken next and a confidence score for that action. The lower the confidence score, the more the current instruction exceeds OS-Kairos's capability boundary, which means human intervention is needed for human-computer interaction.
