@@ -16,7 +16,7 @@ Introduction: This section covers LLM agent construction and safety risk evaluat
 
 ### 1.1 Learn about LLM agents
 
-Read the tutorial: [[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter7/agents.pdf)]
+Read the tutorial: [[Slides](https://github.com/bhumitschaudhry/dive-into-llms-en/blob/main/documents/chapter7/agents.pdf)]
 
 ### 1.2 Learn about LLM-agent "autonomous operating systems"
 

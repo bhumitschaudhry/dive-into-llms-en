@@ -7,7 +7,7 @@
 3. Run inference with the GUI agent you build
 ## 1. Preparation
 ### 1.1 Learn about GUI agent technical approaches and the current research landscape
-Read the tutorial: [[Slides](https://github.com/Lordog/dive-into-llms/blob/main/documents/chapter8/GUIagent.pdf)]
+Read the tutorial: [[Slides](https://github.com/bhumitschaudhry/dive-into-llms-en/blob/main/documents/chapter8/GUIagent.pdf)]
 
 ### 1.2 Learn what an adaptive human-computer interaction GUI agent is
 Reference paper: [[Paper](https://arxiv.org/abs/2503.16465)]
